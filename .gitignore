@@ -1,0 +1,67 @@
+# --- Python 관련 ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.log
+*.sqlite3
+
+# 가상환경
+venv/
+ENV/
+env/
+.venv/
+
+# 환경 변수 파일
+.env
+.env.*
+
+# pipenv, poetry, pyright 등
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock
+Pipfile.lock
+pyrightconfig.json
+.mypy_cache/
+.pytest_cache/
+.dmypy.json
+.pyre/
+.coverage
+.tox/
+.nox/
+
+# IDE 및 에디터 설정
+.vscode/
+.idea/
+*.swp
+
+# --- Node/Vite 프론트엔드 관련 ---
+node_modules/
+dist/
+build/
+*.log
+
+# Vite cache
+.vite/
+
+# 프론트엔드 환경 변수
+*.env.local
+*.env.production
+*.env.development
+
+# OS 관련
+.DS_Store
+Thumbs.db
+
+# 테스트 커버리지
+coverage/
+
+# 데이터
+data/
+[2025-05-12]NODELINKDATA/
