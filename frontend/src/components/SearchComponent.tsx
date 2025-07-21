@@ -66,6 +66,7 @@ const SearchComponent: React.FC<SearchComponentProps> = ({ onPlaceSelect }) => {
           {results.map((result, index) => (
             <li key={index} onClick={() => handleSelect(result)}>
               <strong>{result.name}</strong>
+              <p>{result.category}</p>
               {result.address && <p>{result.address}</p>}
             </li>
           ))}

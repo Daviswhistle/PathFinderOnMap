@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { LatLng, Map } from 'leaflet';
+import { LatLng, Map, type LatLngExpression } from 'leaflet';
 import MapComponent from './components/MapComponent';
 import SearchComponent from './components/SearchComponent';
 import './index.css';
@@ -104,7 +104,7 @@ function App() {
           onMapClick={handleMapClick} 
           startPoint={startPoint} 
           endPoint={endPoint} 
-          routeGeometry={route?.path_geometry}
+          routeGeometry={route?.path_geometry || null}
           center={mapCenter}
           zoom={mapZoom}
         />
