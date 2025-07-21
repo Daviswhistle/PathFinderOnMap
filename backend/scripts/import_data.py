@@ -11,9 +11,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from db.models import Base, Node, Link
 
 # --- CONFIGURATION ---
-# IMPORTANT: Update these paths to point to your actual Shapefiles
-NODE_SHAPEFILE_PATH = "/home/jskim/kdh/map/[2025-05-12]NODELINKDATA/MOCT_NODE.shp"
-LINK_SHAPEFILE_PATH = "/home/jskim/kdh/map/[2025-05-12]NODELINKDATA/MOCT_LINK.shp"
+# 현재 파일(__file__) 기준으로 ../../.. 경로를 계산해 데이터 폴더를 지정
+SCRIPT_DIR = os.path.dirname(__file__)
+DATA_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..', '..', '[2025-05-12]NODELINKDATA'))
+
+NODE_SHAPEFILE_PATH = os.path.join(DATA_DIR, 'MOCT_NODE.shp')
+LINK_SHAPEFILE_PATH = os.path.join(DATA_DIR, 'MOCT_LINK.shp')
 
 def main():
     """Main function to import shapefile data into the database."""
