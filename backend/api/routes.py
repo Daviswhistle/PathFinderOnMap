@@ -107,11 +107,11 @@ def search_places(q: str = Query(None, min_length=2), db: Session = Depends(get_
 
     query = text("""
         SELECT
-            node_name as name, 
-            node_type as category,
+            "NODE_NAME" as name, 
+            "NODE_TYPE" as category,
             ST_AsText(ST_Transform(geom, 4326)) as location
         FROM nodes
-        WHERE node_name LIKE :query_pattern
+        WHERE "NODE_NAME" LIKE :query_pattern
         LIMIT 10;
     """)
 
