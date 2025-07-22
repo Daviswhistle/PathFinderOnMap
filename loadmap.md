@@ -68,3 +68,15 @@
 *   **좌표계:**
     *   **백엔드/DB:** EPSG:5186 (ITRF2000 / Central Belt) - 데이터 처리 및 계산용
     *   **프론트엔드/API:** EPSG:4326 (WGS84) - 위도/경도 표준
+
+---
+
+### **OpenStreetMap 소스 코드 기반 개선 계획 (OpenStreetMap Source Code Based Improvement Plan)**
+
+**목표:** OpenStreetMap 웹사이트의 실제 소스 코드를 분석하여, 검증된 검색 및 경로 탐색 로직을 우리 프로젝트에 맞게 도입하고 기능을 고도화한다.
+
+**참고 소스 코드:** `/home/jskim/openstreetmap/openstreetmap-website/`
+
+**1차 개선 대상:**
+*   **장소 검색 (Search):** `planet_osm_point` 테이블을 넘어, OpenStreetMap에서 사용하는 Geocoding/Search 서비스(예: Nominatim)의 원리를 파악하고, 관련성 높은 검색 결과를 제공하도록 백엔드 API를 개선한다.
+*   **경로 탐색 (Routing):** 현재의 최단 거리 알고리즘을 넘어, 도로 종류, 속도 제한, 회전 제약 등을 고려하는 고급 라우팅 엔진(예: OSRM, GraphHopper, Valhalla)의 연동 또는 자체 구현 방식을 검토하고 적용한다.

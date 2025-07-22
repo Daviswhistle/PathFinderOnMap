@@ -65,3 +65,6 @@ coverage/
 # 데이터
 data/
 [2025-05-12]NODELINKDATA/
+
+# 참고용 파일
+openstreetmap/
