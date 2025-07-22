@@ -1,17 +1,14 @@
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMapEvents, useMap } from 'react-leaflet';
 import { LatLngExpression, Map } from 'leaflet';
+import type { Point } from '../types';
 
 // Define types for props
-interface Point {
-  lat: number;
-  lon: number;
-}
-
 interface MapComponentProps {
   onMapClick: (latlng: { lat: number; lng: number }) => void;
   startPoint: Point | null;
   endPoint: Point | null;
+  selectedPoint: Point | null; // Add selectedPoint prop
   routeGeometry: GeoJSON.LineString | null;
   center: LatLngExpression;
   zoom: number;
@@ -33,7 +30,7 @@ const MapController = ({ onClick, center, zoom }: { onClick: (latlng: { lat: num
   return null;
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, startPoint, endPoint, routeGeometry, center, zoom }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, startPoint, endPoint, selectedPoint, routeGeometry, center, zoom }) => {
   return (
     <MapContainer center={center} zoom={zoom} scrollWheelZoom={true}>
       <TileLayer
@@ -44,13 +41,19 @@ const MapComponent: React.FC<MapComponentProps> = ({ onMapClick, startPoint, end
 
       {startPoint && (
         <Marker position={[startPoint.lat, startPoint.lon]}>
-          <Popup>Start Point</Popup>
+          <Popup>출발지: {startPoint.name}</Popup>
         </Marker>
       )}
 
       {endPoint && (
         <Marker position={[endPoint.lat, endPoint.lon]}>
-          <Popup>End Point</Popup>
+          <Popup>도착지: {endPoint.name}</Popup>
+        </Marker>
+      )}
+
+      {selectedPoint && (
+        <Marker position={[selectedPoint.lat, selectedPoint.lon]} opacity={0.6}>
+          <Popup>선택됨: {selectedPoint.name}</Popup>
         </Marker>
       )}
 

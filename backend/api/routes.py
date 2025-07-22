@@ -158,3 +158,30 @@ def search_places(q: str = Query(None, min_length=2)):
         )
     
     return {"results": search_results}
+
+
+@router.get("/reverse")
+def reverse_geocode(lat: float = Query(...), lon: float = Query(...)):
+    """
+    Performs reverse geocoding to get an address from coordinates.
+    """
+    NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
+    params = {
+        'lat': lat,
+        'lon': lon,
+        'format': 'json',
+        'addressdetails': 1,
+    }
+    headers = {
+        'User-Agent': 'KDH-Map-Project/1.0 (https://github.com/your-repo)',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    }
+
+    try:
+        response = requests.get(NOMINATIM_URL, params=params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        return {"name": data.get("display_name", "Unknown location")}
+    except requests.exceptions.RequestException as e:
+        print(f"Reverse geocoding request failed: {e}")
+        raise HTTPException(status_code=503, detail="Could not connect to the location service.")
