@@ -15,7 +15,7 @@ This project is a web-based map service that provides optimal route finding capa
 - PostgreSQL with PostGIS extension
 - Ubuntu 24.04.2 (or other Debian-based system)
 - **National Standard Node-Link Data**: Download the data, and modify the path in `backend/scripts/import_data.py` to correctly insert it into the database.
-- **south-korea-latest.osm.pbf**: OpenStreetMap data in PBF format.
+- **south-korea-latest.osm.pbf**: OpenStreetMap data in PBF format. You will need to import this data into the database.
 
 ### Backend Setup
 
@@ -40,18 +40,41 @@ This project is a web-based map service that provides optimal route finding capa
     DATABASE_URL=postgresql://user:password@host:port/dbname
     ```
 
-5.  **Navigate back to the project root directory:**
+5.  **Import the National Standard Node-Link Data into the database:**
+    Modify the path in `backend/scripts/import_data.py` to point to your downloaded node-link data, and then run the script to import the data into the database:
+    ```bash
+    python backend/scripts/import_data.py
+    ```
+
+6.  **Import the South Korea OpenStreetMap data (`south-korea-latest.osm.pbf`) into the database:**
+    - Use the `osm2pgsql` tool to import the `.osm.pbf` file into your PostgreSQL/PostGIS database:
+    ```bash
+    osm2pgsql -d your_database_name -U your_database_user -H localhost -P 5432 --create --slim -G --hstore --multi-geometry south-korea-latest.osm.pbf
+    ```
+
+7.  **Navigate back to the project root directory:**
     ```bash
     cd ..
     ```
 
-6.  **Run the application from the root directory:**
+8.  **Run the application from the root directory:**
     ```bash
     uvicorn backend.main:app --reload
     ```
 
 ### Frontend Setup
 
-1.  cd frontend
-2.  npm install
-3.  npm run dev
+1.  **Navigate to the frontend directory:**
+    ```bash
+    cd frontend
+    ```
+
+2.  **Install the required dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Run the frontend application:**
+    ```bash
+    npm run dev
+    ```
