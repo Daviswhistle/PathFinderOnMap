@@ -14,6 +14,8 @@ This project is a web-based map service that provides optimal route finding capa
 - Python 3.10+
 - PostgreSQL with PostGIS extension
 - Ubuntu 24.04.2 (or other Debian-based system)
+- **National Standard Node-Link Data**: Download the data, and modify the path in `backend/scripts/import_data.py` to correctly insert it into the database.
+- **south-korea-latest.osm.pbf**: OpenStreetMap data in PBF format.
 
 ### Backend Setup
 
