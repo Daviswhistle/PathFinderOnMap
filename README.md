@@ -78,3 +78,23 @@ This project is a web-based map service that provides optimal route finding capa
     ```bash
     npm run dev
     ```
+
+### Data Usage and Legal Considerations
+
+1. **Licensing and Attribution**:
+   - The OpenStreetMap data used in this project is licensed under the Open Database License (ODbL). By using this data, you agree to the terms of the ODbL. You must provide appropriate attribution as required by the ODbL. Example attribution:
+     ```
+     Data from OpenStreetMap contributors, licensed under the Open Database License (ODbL).
+     ```
+
+2. **Data Updates and Maintenance**:
+   - The `south-korea-latest.osm.pbf` file is regularly updated by OpenStreetMap. Ensure that your database reflects the latest version of this dataset to maintain accuracy.
+
+3. **Data Privacy and Compliance**:
+   - This project does not collect personal information. However, if you combine this data with other data sources, ensure compliance with data protection laws such as GDPR.
+
+4. **Data Size and Performance**:
+   - OpenStreetMap data is large and may impact performance depending on your infrastructure. Ensure that you have sufficient resources to handle the database and perform optimal queries.
+
+5. **Acknowledgment of Data Providers**:
+   - In addition to OpenStreetMap, any other public datasets used in this project must be properly acknowledged as per the respective licenses.
