@@ -40,7 +40,8 @@ def find_nearest_link_and_snapped_point(db: Session, point: Point):
         "t_node": result[2],
         "link_length": result[3],
         "snapped_point_wkt": result[4],
-        "fraction": result[5]
+        "fraction": result[5],
+        "user_point_wkt": wgs84_wkt  # Return the original point WKT as well
     }
 
 def find_shortest_path(graph: nx.DiGraph, start_node: int, end_node: int) -> tuple[list, float]:
@@ -54,30 +55,74 @@ def find_shortest_path(graph: nx.DiGraph, start_node: int, end_node: int) -> tup
         print(f"Debug (pathfinder): No path found from {start_node} to {end_node}.")
         return None, 0
 
-def get_path_geometry_and_length(db: Session, path_nodes: list[int]):
-    """Constructs the GeoJSON LineString and calculates the length for a path of nodes."""
-    if len(path_nodes) < 2:
-        return None, 0
+def get_full_path_geometry_and_length(db: Session, start_info: dict, end_info: dict, main_path_nodes: list[int]):
+    """
+    Constructs the full path geometry including the snapped start/end segments 
+    and the main path, returning it as a single GeoJSON LineString.
+    """
+    if not main_path_nodes:
+        # This case should ideally be handled before calling, but as a safeguard:
+        # Handle case where start and end are on the same link, but snapped points are different.
+        if start_info['link_id'] == end_info['link_id']:
+            sql_same_link = text("""
+                SELECT ST_AsGeoJSON(ST_Transform(ST_LineSubstring(geom, :start_frac, :end_frac), 4326))
+                FROM links WHERE "LINK_ID" = :link_id;
+            """)
+            start_frac, end_frac = sorted([start_info['fraction'], end_info['fraction']])
+            geom_json, = db.execute(sql_same_link, {
+                'start_frac': start_frac,
+                'end_frac': end_frac,
+                'link_id': start_info['link_id']
+            }).first()
+            return json.loads(geom_json) if geom_json else None
 
-    # The path_nodes list is already ordered.
-    # We can create segments and find links that match these segments,
-    # then order them by the position of their F_NODE in the original path_nodes list.
-    sql = text("""
-        WITH path_links AS (
-            SELECT
-                geom,
-                "LENGTH",
-                array_position(:path_nodes_array, "F_NODE") as pos
+    # SQL query to construct the three parts of the geometry and combine them
+    sql_full_path = text("""
+        WITH main_path_geom AS (
+            -- Geometry of the main path connecting the nodes
+            SELECT ST_MakeLine(geom ORDER BY array_position(:main_path_nodes_array, "F_NODE")) as geom
             FROM links
-            WHERE "F_NODE" = ANY(:path_nodes_array) AND "T_NODE" = ANY(:path_nodes_array)
-              AND array_position(:path_nodes_array, "F_NODE") + 1 = array_position(:path_nodes_array, "T_NODE")
+            WHERE "F_NODE" = ANY(:main_path_nodes_array) AND "T_NODE" = ANY(:main_path_nodes_array)
+              AND array_position(:main_path_nodes_array, "F_NODE") + 1 = array_position(:main_path_nodes_array, "T_NODE")
+        ),
+        start_link_geom AS (
+            -- Partial geometry of the start link
+            SELECT ST_LineSubstring(geom, :start_fraction, CASE WHEN :start_node = "F_NODE" THEN 0 ELSE 1 END) as geom
+            FROM links
+            WHERE "LINK_ID" = :start_link_id
+        ),
+        end_link_geom AS (
+            -- Partial geometry of the end link
+            SELECT ST_LineSubstring(geom, CASE WHEN :end_node = "F_NODE" THEN 0 ELSE 1 END, :end_fraction) as geom
+            FROM links
+            WHERE "LINK_ID" = :end_link_id
         )
-        SELECT
-            ST_AsGeoJSON(ST_Transform(ST_MakeLine(geom ORDER BY pos), 4326)),
-            SUM("LENGTH")
-        FROM path_links;
+        -- Collect all parts into a single LineString
+        SELECT ST_AsGeoJSON(ST_Transform(ST_LineMerge(ST_Collect(
+            ARRAY[
+                (SELECT geom FROM start_link_geom),
+                (SELECT geom FROM main_path_geom),
+                (SELECT geom FROM end_link_geom)
+            ]
+        )), 4326));
     """)
 
-    result = db.execute(sql, {'path_nodes_array': path_nodes}).first()
-    return json.loads(result[0]) if result[0] else None, result[1] or 0
+    # Determine which node on the start/end link is part of the main path
+    start_node_on_path = main_path_nodes[0]
+    end_node_on_path = main_path_nodes[-1]
+
+    params = {
+        'start_fraction': start_info['fraction'],
+        'start_link_id': start_info['link_id'],
+        'start_node': start_node_on_path,
+        'main_path_nodes_array': main_path_nodes,
+        'end_link_id': end_info['link_id'],
+        'end_fraction': end_info['fraction'],
+        'end_node': end_node_on_path,
+    }
+    
+    full_geom_json, = db.execute(sql_full_path, params).first()
+    
+    return json.loads(full_geom_json) if full_geom_json else None
+
 

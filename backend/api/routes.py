@@ -8,7 +8,7 @@ from ..db.session import get_db
 from ..schemas.route import RouteRequest, RouteResponse
 from ..schemas.search import SearchResultItem, SearchResponse
 from ..core.graph import graph_manager
-from ..core.pathfinder import find_nearest_link_and_snapped_point, find_shortest_path, get_path_geometry_and_length
+from ..core.pathfinder import find_nearest_link_and_snapped_point, find_shortest_path, get_full_path_geometry_and_length
 
 router = APIRouter()
 
@@ -57,45 +57,55 @@ def get_route(request: RouteRequest, db: Session = Depends(get_db)):
         return RouteResponse(total_distance_meters=length, path_geometry=geom_dict)
 
     # --- Standard pathfinding logic ---
-    # Determine the nodes for the main path calculation
-    start_node_main = start_info['t_node']
-    end_node_main = end_info['f_node']
-
-    main_path_nodes, main_path_length = find_shortest_path(graph, start_node_main, end_node_main)
+    # Consider both nodes of the start and end links to find the truly shortest path.
+    start_nodes = [start_info['f_node'], start_info['t_node']]
+    end_nodes = [end_info['f_node'], end_info['t_node']]
     
-    print(f"Debug: Main path nodes (initial): {main_path_nodes}")
-    print(f"Debug: Main path length (initial): {main_path_length}")
+    best_path = {
+        "nodes": None,
+        "length": float('inf'),
+        "total_distance": float('inf'),
+        "start_node": None,
+        "end_node": None
+    }
 
-    if main_path_nodes is None:
-        # Try the other direction as a fallback
-        start_node_main_fallback = start_info['f_node']
-        end_node_main_fallback = end_info['t_node']
-        main_path_nodes, main_path_length = find_shortest_path(graph, start_node_main_fallback, end_node_main_fallback)
-        
-        print(f"Debug: Main path nodes (fallback): {main_path_nodes}")
-        print(f"Debug: Main path length (fallback): {main_path_length}")
+    # Iterate through all 4 possible combinations of start/end nodes
+    for s_node in start_nodes:
+        for e_node in end_nodes:
+            main_path_nodes, main_path_length = find_shortest_path(graph, s_node, e_node)
+            
+            if main_path_nodes is None:
+                continue
 
-        if main_path_nodes is None:
-            raise HTTPException(status_code=404, detail="No path found between the road segments.")
+            # Calculate costs for the partial segments based on which node is chosen
+            cost_start = start_info['link_length'] * start_info['fraction'] if s_node == start_info['f_node'] else start_info['link_length'] * (1 - start_info['fraction'])
+            cost_end = end_info['link_length'] * (1 - end_info['fraction']) if e_node == end_info['t_node'] else end_info['link_length'] * end_info['fraction']
+            
+            total_distance = cost_start + main_path_length + cost_end
 
-    # Calculate costs for the partial segments
-    cost_start = start_info['link_length'] * (1 - start_info['fraction'])
-    cost_end = end_info['link_length'] * end_info['fraction']
-    
-    total_distance = cost_start + main_path_length + cost_end
+            print(f"Debug: Trying path S:{s_node} -> E:{e_node}, MainLength:{main_path_length:.2f}, TotalDist:{total_distance:.2f}")
 
-    print(f"Debug: cost_start: {cost_start}")
-    print(f"Debug: cost_end: {cost_end}")
-    print(f"Debug: total_distance: {total_distance}")
+            if total_distance < best_path["total_distance"]:
+                best_path = {
+                    "nodes": main_path_nodes,
+                    "length": main_path_length,
+                    "total_distance": total_distance,
+                    "start_node": s_node,
+                    "end_node": e_node
+                }
 
-    # For simplicity, we are currently returning the geometry of the main path only.
-    # A full implementation would require stitching the three geometry parts together.
-    main_path_geom, _ = get_path_geometry_and_length(db, main_path_nodes)
+    if best_path["nodes"] is None:
+        raise HTTPException(status_code=404, detail="No path found between the road segments.")
 
-    if not main_path_geom:
-        raise HTTPException(status_code=500, detail="Could not construct the main path geometry.")
+    print(f"Debug: Best path found S:{best_path['start_node']} -> E:{best_path['end_node']}, TotalDist:{best_path['total_distance']:.2f}")
 
-    return RouteResponse(total_distance_meters=total_distance, path_geometry=main_path_geom)
+    # Now, use the best path found to construct the full geometry
+    full_path_geom = get_full_path_geometry_and_length(db, start_info, end_info, best_path["nodes"])
+
+    if not full_path_geom:
+        raise HTTPException(status_code=500, detail="Could not construct the full path geometry.")
+
+    return RouteResponse(total_distance_meters=best_path["total_distance"], path_geometry=full_path_geom)
 
 
 @router.get("/search", response_model=SearchResponse)
