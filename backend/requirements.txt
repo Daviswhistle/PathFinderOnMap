@@ -6,3 +6,4 @@ GeoAlchemy2
 networkx
 python-dotenv
 pyshp
+requests

@@ -1,3 +1,4 @@
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -98,47 +99,52 @@ def get_route(request: RouteRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/search", response_model=SearchResponse)
-def search_places(q: str = Query(None, min_length=2), db: Session = Depends(get_db)):
+def search_places(q: str = Query(None, min_length=2)):
     """
-    Searches for distinct places (POIs) and includes a general category.
+    Searches for places using the Nominatim API.
     """
     if not q:
         return {"results": []}
 
-    query = text("""
-        SELECT
-            "NODE_NAME" as name, 
-            "NODE_TYPE" as category,
-            ST_AsText(ST_Transform(geom, 4326)) as location
-        FROM nodes
-        WHERE "NODE_NAME" LIKE :query_pattern
-        LIMIT 10;
-    """)
+    NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+    params = {
+        'q': q,
+        'format': 'json',
+        'addressdetails': 1,
+        'limit': 10,
+        'countrycodes': 'kr',
+    }
+    headers = {
+        'User-Agent': 'KDH-Map-Project/1.0 (https://github.com/Daviswhistle/PathFinderOnMap)',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    }
 
     try:
-        # Use a LIKE query for NODE_ID (which is BigInteger, so cast to TEXT)
-        # and wrap the query with % for partial matching
-        results = db.execute(query, {"query_pattern": f"%{q}%"}).fetchall()
-    except Exception as e:
-        print(f"Database query failed: {e}")
-        raise HTTPException(status_code=500, detail="Database query failed.")
+        response = requests.get(NOMINATIM_URL, params=params, headers=headers)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        results = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Nominatim API request failed: {e}")
+        raise HTTPException(status_code=503, detail="Could not connect to the search service.")
 
     search_results = []
-    for row in results:
-        try:
-            # row[0] is node_name (name), row[1] is node_type (category), row[2] is geom (location)
-            loc_str = row[2].replace('POINT(', '').replace(')', '')
-            lon, lat = map(float, loc_str.split())
-            
-            search_results.append(
-                SearchResultItem(
-                    name=str(row[0]), # node_name is String
-                    category=row[1], # node_type
-                    location={"lat": lat, "lon": lon}
-                )
+    for item in results:
+        address_parts = item.get('address', {})
+        address = ", ".join(filter(None, [
+            address_parts.get('road'),
+            address_parts.get('city'),
+            address_parts.get('county'),
+            address_parts.get('state'),
+            address_parts.get('country')
+        ]))
+
+        search_results.append(
+            SearchResultItem(
+                name=item.get('display_name'),
+                category=item.get('type'),
+                address=address,
+                location={"lat": float(item.get('lat')), "lon": float(item.get('lon'))}
             )
-        except (ValueError, IndexError) as e:
-            print(f"Error parsing row {row}: {e}")
-            continue
+        )
     
     return {"results": search_results}
